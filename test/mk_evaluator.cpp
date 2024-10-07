@@ -16,6 +16,8 @@
 using namespace std;
 using namespace smkhe;
 
+int inputSize = 100;  // Adjust this value for different test sizes
+
 Parameters parametersMKEval((1ULL << 59), 16384, PRIMES, SPECIAL_PRIMES);
 Encoder encMKEval(parametersMKEval);
 Encryptor encryptorMKEval(parametersMKEval);
@@ -43,20 +45,22 @@ unordered_map<uint64_t, MKEvaluationKey> evkMap = {{1, mkEvaluationKey1},
 
 MKEvaluator mkEvaluator(parametersMKEval, publicKeyMap, evkMap);
 
-vector<double> generateDoublesMKEval(int number) {
-    vector<double> result(number);
-    static default_random_engine generator(SEED);
-    static uniform_real_distribution<double> distribution(0.0, 1.5);
-
-    for (int i = 0; i < number; ++i) {
-        result[i] = distribution(generator);
+vector<double> generateDoublesMKEval(int size) {
+vector<double> SNPs = {0, 1, 2, 0, 1};  // Example SNP data
+    vector<double> weights = {0.5, 1.2, 0.8, 0.3, 0.9};  // Weights associated with each SNP
+    
+    vector<double> data(size);
+    
+    // Repeat the SNP and weight pattern to fill the data based on input size
+    for (int i = 0; i < size; i++) {
+        data[i] = SNPs[i % SNPs.size()] * weights[i % weights.size()];
     }
-
-    return result;
+    
+    return data;
 }
 
 TEST(MKEvaluator, AddPlainSameLevel) {
-    vector<double> numbers = generateDoublesMKEval(4096);
+    vector<double> numbers = generateDoublesMKEval(inputSize);
     Plaintext returnedPlaintext = encMKEval.encode(numbers);
 
     Ciphertext ciphertext = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey1Normal);
@@ -70,13 +74,13 @@ TEST(MKEvaluator, AddPlainSameLevel) {
     Plaintext computedPlaintext = mkDecryptor.mergeDecryptions(mkCiphertext, partialDecryptions);
     vector<complex<double>> computedNumbers = encMKEval.decode(computedPlaintext);
 
-    for (int index = 0; index < 4096; ++index) {
+    for (int index = 0; index < inputSize; ++index) {
         ASSERT_NEAR(numbers[index] * 2, computedNumbers[index].real(), 1e-8);
     }
 }
 
 TEST(MKEvaluator, MultiplyPlainSameLevel) {
-    vector<double> numbers = generateDoublesMKEval(4096);
+    vector<double> numbers = generateDoublesMKEval(inputSize);
     Plaintext returnedPlaintext = encMKEval.encode(numbers);
 
     Ciphertext ciphertext = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey1Normal);
@@ -91,13 +95,13 @@ TEST(MKEvaluator, MultiplyPlainSameLevel) {
     Plaintext computedPlaintext = mkDecryptor.mergeDecryptions(mkCiphertext, partialDecryptions);
     vector<complex<double>> computedNumbers = encMKEval.decode(computedPlaintext);
 
-    for (int index = 0; index < 4096; ++index) {
+    for (int index = 0; index < inputSize; ++index) {
         ASSERT_NEAR(numbers[index] * numbers[index], computedNumbers[index].real(), 1e-8);
     }
 }
 
 TEST(MKEvaluator, MultiplyCipherSameLevel) {
-    vector<double> numbers = generateDoublesMKEval(4096);
+    vector<double> numbers = generateDoublesMKEval(inputSize);
     Plaintext returnedPlaintext = encMKEval.encode(numbers);
 
     Ciphertext ciphertext = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey1Normal);
@@ -117,13 +121,13 @@ TEST(MKEvaluator, MultiplyCipherSameLevel) {
     Plaintext computedPlaintext = mkDecryptor.mergeDecryptions(ret, partialDecryptions);
     vector<complex<double>> computedNumbers = encMKEval.decode(computedPlaintext);
 
-    for (int index = 0; index < 4096; ++index) {
+    for (int index = 0; index < inputSize; ++index) {
         ASSERT_NEAR(numbers[index] * numbers[index], computedNumbers[index].real(), 1e-8);
     }
 }
 
 TEST(MKEvaluator, MultiplyCipherAddPlain) {
-    vector<double> numbers = generateDoublesMKEval(4096);
+    vector<double> numbers = generateDoublesMKEval(inputSize);
     Plaintext returnedPlaintext = encMKEval.encode(numbers);
     Ciphertext ciphertext = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey1Normal);
     Ciphertext ciphertext2 = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey2Normal);
@@ -143,13 +147,13 @@ TEST(MKEvaluator, MultiplyCipherAddPlain) {
     Plaintext computedPlaintext = mkDecryptor.mergeDecryptions(ret, partialDecryptions);
     vector<complex<double>> computedNumbers = encMKEval.decode(computedPlaintext);
 
-    for (int index = 0; index < 4096; ++index) {
+    for (int index = 0; index < inputSize; ++index) {
         ASSERT_NEAR(numbers[index] * (numbers[index] + 1), computedNumbers[index].real(), 1e-8);
     }
 }
 
 TEST(MKEvaluator, AddCipherSameLevel) {
-    vector<double> numbers = generateDoublesMKEval(4096);
+    vector<double> numbers = generateDoublesMKEval(inputSize);
     Plaintext returnedPlaintext = encMKEval.encode(numbers);
     Ciphertext ciphertext = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey1Normal);
     Ciphertext ciphertext2 = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey2Normal);
@@ -167,13 +171,13 @@ TEST(MKEvaluator, AddCipherSameLevel) {
     Plaintext computedPlaintext = mkDecryptor.mergeDecryptions(ret, partialDecryptions);
     vector<complex<double>> computedNumbers = encMKEval.decode(computedPlaintext);
 
-    for (int index = 0; index < 4096; ++index) {
+    for (int index = 0; index < inputSize; ++index) {
         ASSERT_NEAR(numbers[index] * 2, computedNumbers[index].real(), 1e-8);
     }
 }
 
 TEST(MKEvaluator, MultiplyPlainAddCipher) {
-    vector<double> numbers = generateDoublesMKEval(4096);
+    vector<double> numbers = generateDoublesMKEval(inputSize);
     Plaintext returnedPlaintext = encMKEval.encode(numbers);
     Ciphertext ciphertext = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey1Normal);
     Ciphertext ciphertext2 = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey2Normal);
@@ -193,13 +197,13 @@ TEST(MKEvaluator, MultiplyPlainAddCipher) {
     Plaintext computedPlaintext = mkDecryptor.mergeDecryptions(ret, partialDecryptions);
     vector<complex<double>> computedNumbers = encMKEval.decode(computedPlaintext);
 
-    for (int index = 0; index < 4096; ++index) {
+    for (int index = 0; index < inputSize; ++index) {
         ASSERT_NEAR(numbers[index] * (numbers[index] + 1), computedNumbers[index].real(), 1e-8);
     }
 }
 
 TEST(MKEvaluator, Negate) {
-    vector<double> numbers = generateDoublesMKEval(4096);
+    vector<double> numbers = generateDoublesMKEval(inputSize);
     Plaintext returnedPlaintext = encMKEval.encode(numbers);
     Ciphertext ciphertext = encryptorMKEval.encrypt(returnedPlaintext, mkPublicKey1Normal);
     MKCiphertext mkCiphertext(ciphertext, 1, ciphertext.getLevel());
@@ -211,7 +215,7 @@ TEST(MKEvaluator, Negate) {
     Plaintext computedPlaintext = mkDecryptor.mergeDecryptions(mkCiphertext, partialDecryptions);
     vector<complex<double>> computedNumbers = encMKEval.decode(computedPlaintext);
 
-    for (int index = 0; index < 4096; ++index) {
+    for (int index = 0; index < inputSize; ++index) {
         ASSERT_NEAR(-numbers[index], computedNumbers[index].real(), 1e-8);
     }
 }
