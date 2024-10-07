@@ -1,41 +1,77 @@
-# Single &amp; Multi Key Homomorphic Encryption Library
 
-This C++ library implements the Full-RNS CKKS Homomorphic Encryption scheme.
-Apart from the basic use-case of CKKS, the library also implements the multi-key variant explained in this [paper](https://eprint.iacr.org/2019/524.pdf). The library doesn't implement Galois keys and can be used as a reference for future C++ multi-key CKKS libraries.
-The library was created as part of final-year university project in order to compare with existing HE libraries while using [HE for contact tracing](https://github.com/andru47/contact-tracing-he).
+# SMKHE - Secure Multi-Key Homomorphic Encryption
 
-:warning: It is an experimental library and should not be used in production.
+This repository contains the extended and customized version of the [SMKHE project](https://github.com/andru47/smkhe), which implements multi-key homomorphic encryption. This version has been customized for use in scenarios like personalized medicine and SNP data encryption and decryption with patterned data input.
 
-# Build
-The library depends on [Protobuf](https://github.com/protocolbuffers/protobuf) and [BigInt](https://github.com/faheel/BigInt). While building BigInt is included in CMake, Protobuf needs to be installed beforehand.
+## Features
 
-The command for building is:
+- **Homomorphic Encryption**: Supports encoding, encryption, and decryption using multi-key homomorphic encryption (MKHE).
+- **Dynamic Input Size**: The project has been extended to allow for dynamic input size using patterned data or random data, allowing testing at various scales.
+- **SNP Data Simulation**: Implements custom pattern-based data input for SNPs and weights in healthcare applications.
 
-1. ```cmake -B build .``` 
-2. ```cmake --build build```
+## Requirements
 
-After this, the library will be created inside the `build` folder.
+To use this project, you will need:
 
-# Build for iOS/Android
-The library can also be compiled for iOS/Android.
+- **CMake**: For building the project.
+- **GTest**: For running the tests.
+- **A C++17 compatible compiler**: For compiling the code.
+- **Git**: For cloning and managing the repository.
 
-### iOS
-Protobuf needs to be built firstly. Using their source code, we can generate a binary with CMake and Xcode. After this, the ``smkhe`` library can be built.
-1. Generate the Xcode project with:
-    
-    ``cmake -S . -B build-ios -GXcode -DCMAKE_SYSTEM_NAME=iOS "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" -Dprotobuf_BUILD_TESTS=OFF``
-2. Then, using the project created inside `build-ios`, the protobuf binary can be built.
-3. Modify the `PROTOBUF_LIB` variable from line 6 of the [CMakeLists file](cmake/CMakeLists.txt) to point to the binary
-4. Use CMake with the `CMakeLists` file from the `cmake` folder as in the first step to generate the iOS project of `smkhe`
+## Installation
 
-### Android
-1. Using the details from [here](https://developer.android.com/ndk/guides/cmake#usage), we can build the `Protobuf` binary using CMake
-2. Modify the `PROTOBUF_LIB` variable from line 6 of the [CMakeLists file](cmake/CMakeLists.txt) to point to the binary
-3. Similarly to 1, build the ``smkhe`` binary using CMake
+1. Clone the repository:
 
-# References
+   ```bash
+   git clone https://github.com/your-username/smkhe.git
+   ```
 
-1. [Homomorphic encryption for arithmetic of approximate numbers](https://eprint.iacr.org/2016/421.pdf)
-2. [Efficient multi-key homomorphic encryption with packed ciphertexts with application to oblivious neural network inference](https://eprint.iacr.org/2019/524.pdf)
-3. [A full rns variant of approximate homomorphic encryption](https://eprint.iacr.org/2018/931.pdf)
-4. [Faster homomorphic discrete fourier transforms and improved fhe bootstrapping](https://eprint.iacr.org/2018/1073.pdf)
+2. Navigate to the project directory:
+
+   ```bash
+   cd smkhe
+   ```
+
+3. Build the project:
+
+   ```bash
+   cmake -B build
+   cmake --build build
+   ```
+
+4. Run the tests:
+
+   ```bash
+   ./build/tests
+   ```
+
+## Usage
+
+This project includes a test suite based on `Google Test` for validating the encryption, decryption, and evaluation logic.
+
+### Example Test: Dynamic Input Size
+
+This test encrypts and decrypts a dataset, ensuring the result matches the original input:
+
+```cpp
+TEST(Encoder, DynamicInputSizeTest) {
+    // Initialize Parameters
+    Parameters parameters(pow(2.0, 50), 16384, {1152921504606748673}, {1152921504606748673});
+    MKKeygen keygen(parameters, 12345);
+    SecretKey secretKey = keygen.generateSecretKey();
+    MKPublicKey publicKey = keygen.generatePublicKey();
+    MKEvaluationKey evalKey = keygen.generateEvaluationKey(publicKey);
+
+    // Generate dynamic input size data with the pattern
+    int inputSize = 1000;  // Adjust this value for different input sizes
+    vector<double> data = generatePatternedData(inputSize);
+
+    // Encoding, encrypting, and decrypting logic follows...
+}
+```
+
+You can adjust the input size to scale the encryption and test larger datasets.
+
+## License
+
+This project follows the [MIT License](LICENSE).
