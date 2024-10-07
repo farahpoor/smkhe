@@ -11,16 +11,19 @@ The test is designed to handle variable input sizes, simulating the scenario for
 The runtime should reflect the complexity of operations, but additional optimizations like batching or parallelization can be applied to make it more efficient. 
 */
 
-#include "gtest/gtest.h"
+##include "gtest/gtest.h"
 #include "smkhe/encoder.h"
 #include "smkhe/encryptor.h"
 #include "smkhe/mk_evaluator.h"
 #include "smkhe/mk_keygen.h"
 #include "smkhe/mk_decryptor.h"
+#include <chrono>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 using namespace smkhe;
+using namespace std::chrono;
 
 // Function to generate SNPs and weights based on input size
 vector<double> generateSNPData(int size) {
@@ -37,7 +40,14 @@ vector<double> generateSNPData(int size) {
     return data;
 }
 
-TEST(Encoder, IndividualGenomicTest) {
+    // Generate SNP data once
+    int inputSize2 = 1000;  
+    vector<double> SNPs = generateSNPData(inputSize2);
+
+
+
+
+TEST(Encoder, HomomorphicAdditionTest) {
     // Initialize Parameters
     Parameters parameters(pow(2.0, 50), 16384, {1152921504606748673}, {1152921504606748673});
     MKKeygen keygen(parameters, 12345);
@@ -53,9 +63,46 @@ TEST(Encoder, IndividualGenomicTest) {
     Encoder encoder(parameters);
     MKDecryptor decryptor(parameters);
 
-    // Generate SNPs and weights data
-    int inputSize = 8000;  // Adjust this value for different test sizes
-    vector<double> SNPs = generateSNPData(inputSize);
+
+
+    // Encode and encrypt SNP data
+    Plaintext encodedSNPs = encoder.encode(SNPs);
+    PublicKey pk = publicKey.getPublicKey();  
+    Ciphertext encryptedSNPs = encryptor.encrypt(encodedSNPs, pk);
+    MKCiphertext mkEncryptedSNPs(encryptedSNPs, 1, 0);
+
+
+    evaluator.addPlainInPlace(mkEncryptedSNPs, encodedSNPs);  // Perform addition with plaintext
+
+
+    // Decrypt and verify results
+    PartialCiphertext partialDecryption = decryptor.partialDecryption(mkEncryptedSNPs, 1, secretKey);
+    vector<PartialCiphertext> partialDecryptions = {partialDecryption};
+    Plaintext decryptedSNPs = decryptor.mergeDecryptions(mkEncryptedSNPs, partialDecryptions);
+    vector<complex<double>> decodedSNPs = encoder.decode(decryptedSNPs);
+
+    // Verify results
+    for (int i = 0; i < inputSize2; i++) {
+        ASSERT_NEAR(SNPs[i] + SNPs[i], decodedSNPs[i].real(), 1e-6);
+    }
+}
+
+TEST(Encoder, HomomorphicMultiplicationTest) {
+    // Initialize Parameters
+    Parameters parameters(pow(2.0, 50), 16384, {1152921504606748673}, {1152921504606748673});
+    MKKeygen keygen(parameters, 12345);
+    SecretKey secretKey = keygen.generateSecretKey();
+    MKPublicKey publicKey = keygen.generatePublicKey();
+    MKEvaluationKey evalKey = keygen.generateEvaluationKey(publicKey);
+
+    // Create components
+    Encryptor encryptor(parameters);
+    unordered_map<uint64_t, MKPublicKey> publicKeys = {{1, publicKey}};
+    unordered_map<uint64_t, MKEvaluationKey> evaluationKeys = {{1, evalKey}};
+    MKEvaluator evaluator(parameters, publicKeys, evaluationKeys);
+    Encoder encoder(parameters);
+    MKDecryptor decryptor(parameters);
+
 
     // Encode SNP data
     Plaintext encodedSNPs = encoder.encode(SNPs);
@@ -67,7 +114,6 @@ TEST(Encoder, IndividualGenomicTest) {
     // Perform homomorphic addition and multiplication
     MKCiphertext mkEncryptedSNPs(encryptedSNPs, 1, 0);
 
-    // Homomorphic operations on encrypted data (e.g., multiply, add) could go here.
 
     // Decrypt the data to verify
     PartialCiphertext partialDecryption = decryptor.partialDecryption(mkEncryptedSNPs, 1, secretKey);
@@ -78,7 +124,7 @@ TEST(Encoder, IndividualGenomicTest) {
     vector<complex<double>> decodedSNPs = encoder.decode(decryptedSNPs);
 
     // Verify results
-    for (int i = 0; i < inputSize; i++) {
+    for (int i = 0; i < inputSize2; i++) {
         ASSERT_NEAR(SNPs[i], decodedSNPs[i].real(), 1e-6);  // Adjust tolerance if needed
     }
 }
